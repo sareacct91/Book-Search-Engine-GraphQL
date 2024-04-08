@@ -1,4 +1,5 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useId } from 'react';
+import { useMutation } from "@apollo/client";
 import {
   Container,
   Col,
@@ -12,6 +13,8 @@ import Auth from '../utils/auth';
 import { saveBook, searchGoogleBooks } from '../utils/API';
 import { saveBookIds, getSavedBookIds } from '../utils/localStorage';
 
+import { ADD_BOOK } from "../utils/mutations";
+
 const SearchBooks = () => {
   // create state for holding returned google api data
   const [searchedBooks, setSearchedBooks] = useState([]);
@@ -19,14 +22,22 @@ const SearchBooks = () => {
   const [searchInput, setSearchInput] = useState('');
   // create state to hold saved bookId values
   const [savedBookIds, setSavedBookIds] = useState([]);
+  const [userId, setUserId] = useState('');
+
+  const [addBook, { error: muErr }] = useMutation(ADD_BOOK);
 
   useEffect(() => {
-    setSavedBookIds(getSavedBookIds);
+    if (Auth.loggedIn()) {
+      const {data: {_id}} = Auth.getProfile();
+      setUserId(_id);
+      setSavedBookIds(getSavedBookIds(_id));
+    }
   }, []);
 
   useEffect(() => {
-    saveBookIds(savedBookIds);
-  });
+    saveBookIds(savedBookIds, userId);
+  }, [savedBookIds]);
+
 
   // create method to search for books and set state on form submit
   const handleFormSubmit = async (event) => {
@@ -66,18 +77,17 @@ const SearchBooks = () => {
     const bookToSave = searchedBooks.find((book) => book.bookId === bookId);
 
     // get token
-    const token = Auth.loggedIn() ? Auth.getToken() : null;
+    // const token = Auth.loggedIn() ? Auth.getToken() : null;
 
-    if (!token) {
+    if (!userId) {
       return false;
     }
 
     try {
-      const response = await saveBook(bookToSave, token);
-
-      if (!response.ok) {
-        throw new Error('something went wrong!');
-      }
+      // const response = await saveBook(bookToSave, token);
+      await addBook({
+        variables: { ...bookToSave },
+      });
 
       // if book successfully saves to user's account, save book id to state
       setSavedBookIds([...savedBookIds, bookToSave.bookId]);
