@@ -34,13 +34,10 @@ const LoginForm = () => {
         variables: {...userFormData}
       })
 
-      if (muError) {
-        throw new Error('something went wrong!');
-      }
-
       // const { token, user } = await response.json();
-      const { token, user } = data;
+      const { token, user } = data.login;
       console.log(user);
+      console.log(token);
       Auth.login(token);
     } catch (err) {
       console.error(err);
